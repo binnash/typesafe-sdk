@@ -186,6 +186,55 @@ describe('requests', function () {
             'questions' => ['q' => ['type' => 'noul', 'instructions' => '?', 'criteria' => null]],
         ]);
     });
+
+    it('forwards extra top-level fields unchanged', function () {
+        $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
+
+        makeClient($http)->systemOne('s', ['q' => noul('?')], extra: [
+            'future_option' => null,
+            'nested' => ['enabled' => true],
+        ]);
+
+        expect(sentBody($http))->toBe([
+            'state' => 's',
+            'model' => 'jev-latest',
+            'questions' => ['q' => ['type' => 'noul', 'instructions' => '?', 'criteria' => null]],
+            'future_option' => null,
+            'nested' => ['enabled' => true],
+        ]);
+    });
+
+    it('omits extra fields that were not supplied', function () {
+        $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
+
+        makeClient($http)->systemOne('s', ['q' => noul('?')]);
+
+        expect(sentBody($http))->not->toHaveKey('future_option');
+    });
+
+    it('never lets extra fields override state, model, or questions', function () {
+        $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
+
+        makeClient($http)->systemOne('real state', ['q' => noul('?')], model: 'pinned-model', extra: [
+            'state' => 'hijacked',
+            'model' => 'hijacked',
+            'questions' => ['hijacked' => ['type' => 'noul']],
+        ]);
+
+        expect(sentBody($http))->toBe([
+            'state' => 'real state',
+            'model' => 'pinned-model',
+            'questions' => ['q' => ['type' => 'noul', 'instructions' => '?', 'criteria' => null]],
+        ]);
+    });
+
+    it('forwards extra fields through systemOneWithResponse', function () {
+        $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
+
+        makeClient($http)->systemOneWithResponse('s', ['q' => noul('?')], extra: ['future_option' => true]);
+
+        expect(sentBody($http)['future_option'])->toBeTrue();
+    });
 });
 
 describe('answers', function () {

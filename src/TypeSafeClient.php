@@ -58,6 +58,7 @@ final class TypeSafeClient implements JsonSerializable
      * @param  array<string, QuestionInterface>  $questions  Non-empty questions keyed by the answer names.
      * @param  string|null  $model  Model override; omitted values use the configured default.
      * @param  array{headers?: array<string, string>, timeout?: float, retry?: RetryPolicy|array<string, mixed>}  $options  Per-call overrides.
+     * @param  array<string, mixed>  $extra  Additional top-level fields forwarded with the request.
      *
      * @throws TypeSafeException When no questions are given or a value is not a question.
      */
@@ -66,8 +67,9 @@ final class TypeSafeClient implements JsonSerializable
         array $questions,
         ?string $model = null,
         array $options = [],
+        array $extra = [],
     ): SystemOneResult {
-        $response = $this->systemOneWithResponse($state, $questions, $model, $options);
+        $response = $this->systemOneWithResponse($state, $questions, $model, $options, $extra);
 
         return SystemOneResult::fromArray($response->data, $response->requestId);
     }
@@ -82,6 +84,7 @@ final class TypeSafeClient implements JsonSerializable
      * @param  array<string, QuestionInterface>  $questions  Non-empty questions keyed by the answer names.
      * @param  string|null  $model  Model override; omitted values use the configured default.
      * @param  array{headers?: array<string, string>, timeout?: float, retry?: RetryPolicy|array<string, mixed>}  $options  Per-call overrides.
+     * @param  array<string, mixed>  $extra  Additional top-level fields forwarded with the request.
      *
      * @throws TypeSafeException When no questions are given, a value is not a question, or the response is malformed.
      */
@@ -90,11 +93,12 @@ final class TypeSafeClient implements JsonSerializable
         array $questions,
         ?string $model = null,
         array $options = [],
+        array $extra = [],
     ): ApiResponse {
         $response = $this->transporter->request(
             'POST',
             '/v1/systemone',
-            $this->systemOnePayload($state, $questions, $model),
+            $this->systemOnePayload($state, $questions, $model, $extra),
             $options,
         );
 
@@ -112,18 +116,26 @@ final class TypeSafeClient implements JsonSerializable
     /**
      * Build the request body, validating the questions before anything is sent.
      *
+     * `state`, `model`, and `questions` are always SDK-owned; extra fields are merged
+     * around them so future API options can be forwarded unchanged.
+     *
      * @param  array<string, QuestionInterface>  $questions
+     * @param  array<string, mixed>  $extra
      * @return array<string, mixed>
      *
      * @throws TypeSafeException When no questions are given or a value is not a question.
      */
-    private function systemOnePayload(mixed $state, array $questions, ?string $model): array
+    private function systemOnePayload(mixed $state, array $questions, ?string $model, array $extra): array
     {
-        return [
+        $payload = [
             'state' => $state,
             'model' => $model ?? $this->config->defaultModel,
             'questions' => $this->wireQuestions($questions),
         ];
+
+        unset($extra['state'], $extra['model'], $extra['questions']);
+
+        return $payload + $extra;
     }
 
     /**
