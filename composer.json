@@ -46,7 +46,8 @@
         "sort-packages": true
     },
     "scripts": {
-        "test": "vendor/bin/pest",
+        "test": "vendor/bin/pest --testsuite unit-feature",
+        "test:integration": "vendor/bin/pest --testsuite integration",
         "pint": "vendor/bin/pint"
     },
     "minimum-stability": "stable",

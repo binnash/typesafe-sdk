@@ -11,7 +11,7 @@ use GuzzleHttp\Psr7\Response;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseInterface;
 
-pest()->extend(TestCase::class)->in('Feature', 'Unit');
+pest()->extend(TestCase::class)->in('Feature', 'Unit', 'Integration');
 
 /**
  * Capture `var_dump()` output for an object, which honors `__debugInfo()`.
@@ -103,4 +103,57 @@ function clockFrom(array $times): Closure
 
         return $time;
     };
+}
+
+/**
+ * The TypeSafe API key for live integration tests, or `null` when it is unset.
+ *
+ * The SDK itself never reads the environment; only this test suite does, to decide
+ * whether live calls are possible.
+ */
+function liveApiKey(): ?string
+{
+    $key = getenv('TYPESAFE_API_KEY');
+
+    if ($key === false || trim($key) === '') {
+        $key = $_ENV['TYPESAFE_API_KEY'] ?? '';
+    }
+
+    return is_string($key) && trim($key) !== '' ? trim($key) : null;
+}
+
+/**
+ * A client pointed at the live API, for integration tests only.
+ *
+ * @param  array<string, mixed>  $config  Named `ClientConfig` overrides.
+ */
+function liveClient(?string $apiKey = null, array $config = []): TypeSafeClient
+{
+    $baseURL = getenv('TYPESAFE_BASE_URL');
+
+    return new TypeSafeClient(ClientConfig::make(array_merge([
+        'apiKey' => $apiKey ?? liveApiKey() ?? '',
+        'baseURL' => $baseURL === false || $baseURL === '' ? ClientConfig::DEFAULT_BASE_URL : $baseURL,
+        'timeout' => 120.0,
+    ], $config)));
+}
+
+/**
+ * Print a labelled value to STDERR so live responses are visible without being asserted on.
+ */
+function showLive(string $label, mixed $value): void
+{
+    fwrite(STDERR, sprintf(
+        "\n--- %s ---\n%s\n",
+        $label,
+        json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
+    ));
+}
+
+/**
+ * Reason shown when the live integration suite is skipped.
+ */
+function liveSkipReason(): string
+{
+    return 'Set TYPESAFE_API_KEY to run the live integration tests.';
 }
