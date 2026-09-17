@@ -9,6 +9,7 @@ use Binnash\Typesafe\Exceptions\BadRequestException;
 use Binnash\Typesafe\Exceptions\TypeSafeException;
 use Binnash\Typesafe\Exceptions\UnprocessableEntityException;
 use Binnash\Typesafe\Retry\RetryPolicy;
+use Binnash\Typesafe\Support\Question;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,13 +51,13 @@ it('lists models', function () {
 
 it('answers noul, choice, and score questions together', function () use ($ticket) {
     $response = liveClient()->systemOneWithResponse($ticket, [
-        'isBilling' => noul('Is this ticket about billing?'),
-        'sentiment' => choice("What is the customer's tone?", [
+        'isBilling' => Question::noul('Is this ticket about billing?'),
+        'sentiment' => Question::choice("What is the customer's tone?", [
             'calm' => null,
             'frustrated' => null,
             'angry' => null,
         ]),
-        'urgency' => score('How urgent is this ticket?', ['can wait', 'this week', 'today']),
+        'urgency' => Question::score('How urgent is this ticket?', ['can wait', 'this week', 'today']),
     ]);
 
     showLive('POST /v1/systemone', [
@@ -86,13 +87,13 @@ it('answers noul, choice, and score questions together', function () use ($ticke
 
 it('accepts rich descriptions and one-sided noul criteria', function () use ($ticket) {
     $result = liveClient()->systemOne($ticket, [
-        'duplicate' => noul('Is the customer reporting a duplicate charge?', [
+        'duplicate' => Question::noul('Is the customer reporting a duplicate charge?', [
             'true' => [
                 'meaning' => 'the same amount charged more than once',
                 'examples' => ['billed twice'],
             ],
         ]),
-        'tone' => choice('Tone?', [
+        'tone' => Question::choice('Tone?', [
             'calm' => ['summary' => 'measured', 'examples' => ['please look into this']],
             'upset' => null,
         ]),
@@ -131,7 +132,7 @@ it('rejects an unknown model with a readable BadRequestException', function () {
     try {
         $client->systemOne(
             'hello',
-            ['q' => noul('Is this a greeting?')],
+            ['q' => Question::noul('Is this a greeting?')],
             model: 'no-such-model',
             options: ['retry' => new RetryPolicy(maxRetries: 0)],
         );
@@ -159,7 +160,7 @@ it('surfaces server-side validation errors readably', function () {
     try {
         $client->systemOne(
             'x',
-            ['q' => score('?', [123, 'ok'])],
+            ['q' => Question::score('?', [123, 'ok'])],
             options: ['retry' => new RetryPolicy(maxRetries: 0)],
         );
     } catch (ApiException $e) {
@@ -180,6 +181,6 @@ it('catches shapes the API would reject before sending', function () {
 
     expect(fn () => $client->systemOne('x', []))
         ->toThrow(TypeSafeException::class, 'At least one question is required.')
-        ->and(fn () => $client->systemOne('x', ['q' => score('?', ['only'])]))
+        ->and(fn () => $client->systemOne('x', ['q' => Question::score('?', ['only'])]))
         ->toThrow(TypeSafeException::class, 'Score criteria must contain at least two levels; got 1.');
 })->skip(fn (): bool => liveApiKey() === null, liveSkipReason());

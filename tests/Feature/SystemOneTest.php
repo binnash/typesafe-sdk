@@ -8,6 +8,7 @@ use Binnash\Typesafe\DTO\ScoreResponse;
 use Binnash\Typesafe\DTO\Usage;
 use Binnash\Typesafe\Exceptions\TypeSafeException;
 use Binnash\Typesafe\Http\ApiResponse;
+use Binnash\Typesafe\Support\Question;
 use Binnash\Typesafe\Tests\Support\FakeHttpClient;
 use Binnash\Typesafe\TypeSafeClient;
 
@@ -34,7 +35,7 @@ describe('requests', function () {
 
         $result = $client->systemOne(
             ['document' => 'I was charged twice. Please fix this ASAP.'],
-            ['is_billing' => noul('Is this about billing?')],
+            ['is_billing' => Question::noul('Is this about billing?')],
         );
 
         $request = $http->lastRequest();
@@ -61,9 +62,9 @@ describe('requests', function () {
         $client = makeClient($http);
 
         $client->systemOne('state', [
-            'sentiment' => choice('What is the tone?', ['calm' => null, 'frustrated' => null]),
-            'urgency' => score('How urgent?', ['can wait', 'this week', 'today']),
-            'is_billing' => noul('Billing?', ['true' => 'About money', 'false' => 'Not about money']),
+            'sentiment' => Question::choice('What is the tone?', ['calm' => null, 'frustrated' => null]),
+            'urgency' => Question::score('How urgent?', ['can wait', 'this week', 'today']),
+            'is_billing' => Question::noul('Billing?', ['true' => 'About money', 'false' => 'Not about money']),
         ]);
 
         expect(sentBody($http)['questions'])->toBe([
@@ -89,9 +90,9 @@ describe('requests', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
         makeClient($http)->systemOne(null, [
-            'noul' => noul(null, ['true' => null, 'false' => null]),
-            'choice' => choice(null, ['yes' => null, 'no' => null]),
-            'score' => score(null, [null, 'high']),
+            'noul' => Question::noul(null, ['true' => null, 'false' => null]),
+            'choice' => Question::choice(null, ['yes' => null, 'no' => null]),
+            'score' => Question::score(null, [null, 'high']),
         ]);
 
         expect(json_decode((string) $http->lastRequest()->getBody(), true))->toBe([
@@ -112,8 +113,8 @@ describe('requests', function () {
         ]);
         $client = makeClient($http, ['defaultModel' => 'client-default']);
 
-        $client->systemOne('s', ['q' => noul('?')]);
-        $client->systemOne('s', ['q' => noul('?')], model: 'per-call');
+        $client->systemOne('s', ['q' => Question::noul('?')]);
+        $client->systemOne('s', ['q' => Question::noul('?')], model: 'per-call');
 
         expect(sentBody($http)['model'])->toBe('per-call')
             ->and(json_decode((string) $http->requests[0]->getBody(), true)['model'])->toBe('client-default');
@@ -122,7 +123,7 @@ describe('requests', function () {
     it('passes per-call headers and timeouts through', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        makeClient($http)->systemOne('s', ['q' => noul('?')], options: [
+        makeClient($http)->systemOne('s', ['q' => Question::noul('?')], options: [
             'headers' => ['X-Trace' => 'trace-1'],
             'timeout' => 3.0,
         ]);
@@ -156,7 +157,7 @@ describe('requests', function () {
     it('fails clearly on an unrecognized response shape', function (mixed $wire, string $expected) {
         $http = new FakeHttpClient([jsonResponse(200, $wire)]);
 
-        expect(fn () => makeClient($http)->systemOne('s', ['q' => noul('?')]))
+        expect(fn () => makeClient($http)->systemOne('s', ['q' => Question::noul('?')]))
             ->toThrow(TypeSafeException::class, $expected);
     })->with([
         'null' => [
@@ -178,7 +179,7 @@ describe('requests', function () {
     it('sends a per-call model with the request as the payload', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        makeClient($http)->systemOne('s', ['q' => noul('?')], model: 'jev-1.13.0');
+        makeClient($http)->systemOne('s', ['q' => Question::noul('?')], model: 'jev-1.13.0');
 
         expect(sentBody($http))->toBe([
             'state' => 's',
@@ -190,7 +191,7 @@ describe('requests', function () {
     it('forwards extra top-level fields unchanged', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        makeClient($http)->systemOne('s', ['q' => noul('?')], extra: [
+        makeClient($http)->systemOne('s', ['q' => Question::noul('?')], extra: [
             'future_option' => null,
             'nested' => ['enabled' => true],
         ]);
@@ -207,7 +208,7 @@ describe('requests', function () {
     it('omits extra fields that were not supplied', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        makeClient($http)->systemOne('s', ['q' => noul('?')]);
+        makeClient($http)->systemOne('s', ['q' => Question::noul('?')]);
 
         expect(sentBody($http))->not->toHaveKey('future_option');
     });
@@ -215,7 +216,7 @@ describe('requests', function () {
     it('never lets extra fields override state, model, or questions', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        makeClient($http)->systemOne('real state', ['q' => noul('?')], model: 'pinned-model', extra: [
+        makeClient($http)->systemOne('real state', ['q' => Question::noul('?')], model: 'pinned-model', extra: [
             'state' => 'hijacked',
             'model' => 'hijacked',
             'questions' => ['hijacked' => ['type' => 'noul']],
@@ -231,7 +232,7 @@ describe('requests', function () {
     it('forwards extra fields through systemOneWithResponse', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        makeClient($http)->systemOneWithResponse('s', ['q' => noul('?')], extra: ['future_option' => true]);
+        makeClient($http)->systemOneWithResponse('s', ['q' => Question::noul('?')], extra: ['future_option' => true]);
 
         expect(sentBody($http)['future_option'])->toBeTrue();
     });
@@ -261,9 +262,9 @@ describe('answers', function () {
         ])]);
 
         $result = makeClient($http)->systemOne('state', [
-            'is_billing' => noul('?'),
-            'tone' => choice('?', ['calm' => null, 'frustrated' => null, 'angry' => null]),
-            'urgency' => score('?', ['calm', 'frustrated', 'very angry']),
+            'is_billing' => Question::noul('?'),
+            'tone' => Question::choice('?', ['calm' => null, 'frustrated' => null, 'angry' => null]),
+            'urgency' => Question::score('?', ['calm', 'frustrated', 'very angry']),
         ]);
 
         $answers = $result->answers;
@@ -289,7 +290,7 @@ describe('answers', function () {
     it('supports array, method, and collection access', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        $answers = makeClient($http)->systemOne('s', ['q1' => noul('?')])->answers;
+        $answers = makeClient($http)->systemOne('s', ['q1' => Question::noul('?')])->answers;
 
         expect($answers['q1'])->toBeInstanceOf(NoulResponse::class)
             ->and($answers->get('q1'))->toBeInstanceOf(NoulResponse::class)
@@ -305,7 +306,7 @@ describe('answers', function () {
 
     it('reports a missing or mistyped answer', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
-        $answers = makeClient($http)->systemOne('s', ['q1' => noul('?')])->answers;
+        $answers = makeClient($http)->systemOne('s', ['q1' => Question::noul('?')])->answers;
 
         expect(fn () => $answers->get('missing'))
             ->toThrow(TypeSafeException::class, 'No answer was returned for question "missing".')
@@ -315,7 +316,7 @@ describe('answers', function () {
 
     it('is immutable', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
-        $answers = makeClient($http)->systemOne('s', ['q1' => noul('?')])->answers;
+        $answers = makeClient($http)->systemOne('s', ['q1' => Question::noul('?')])->answers;
 
         $unsetOffset = function () use ($answers): void {
             unset($answers['q1']);
@@ -341,7 +342,7 @@ describe('answers', function () {
             'usage' => ['input_tokens' => 1, 'output_tokens' => 1],
         ])]);
 
-        expect(fn () => makeClient($http)->systemOne('s', ['q1' => noul('?')]))
+        expect(fn () => makeClient($http)->systemOne('s', ['q1' => Question::noul('?')]))
             ->toThrow(TypeSafeException::class, $expected);
     })->with([
         'missing type' => [['noul' => 0.5], 'Answer "q1" is missing its type.'],
@@ -351,7 +352,7 @@ describe('answers', function () {
     it('exposes the raw response body', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        $result = makeClient($http)->systemOne('s', ['q1' => noul('?')]);
+        $result = makeClient($http)->systemOne('s', ['q1' => Question::noul('?')]);
 
         expect($result->toArray())->toBe(SYSTEM_ONE_RESPONSE)
             ->and(json_encode($result))->toBe(json_encode(SYSTEM_ONE_RESPONSE))
@@ -364,7 +365,7 @@ describe('answers', function () {
             'answers' => ['q1' => ['type' => 'noul', 'noul' => 0.1]],
         ])]);
 
-        $result = makeClient($http)->systemOne('s', ['q1' => noul('?')]);
+        $result = makeClient($http)->systemOne('s', ['q1' => Question::noul('?')]);
 
         expect($result->usage->inputTokens)->toBe(0)
             ->and($result->usage->outputTokens)->toBe(0);
@@ -374,7 +375,7 @@ describe('answers', function () {
 it('reports the model that answered', function () {
     $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-    expect(makeClient($http)->systemOne('s', ['q1' => noul('?')])->model)->toBe('jev-1.13.0')
+    expect(makeClient($http)->systemOne('s', ['q1' => Question::noul('?')])->model)->toBe('jev-1.13.0')
         ->and(TypeSafeClient::VERSION)->toBe('0.1.0');
 });
 
@@ -384,7 +385,7 @@ describe('response metadata', function () {
             jsonResponse(200, SYSTEM_ONE_RESPONSE, ['x-typesafe-request-id' => 'req_123']),
         ]);
 
-        $result = makeClient($http)->systemOne('s', ['q1' => noul('?')]);
+        $result = makeClient($http)->systemOne('s', ['q1' => Question::noul('?')]);
 
         expect($result->requestId)->toBe('req_123')
             ->and($result->toArray())->toBe(SYSTEM_ONE_RESPONSE)
@@ -399,7 +400,7 @@ describe('response metadata', function () {
     it('leaves the request id null when the header is absent', function () {
         $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
 
-        $result = makeClient($http)->systemOne('s', ['q1' => noul('?')]);
+        $result = makeClient($http)->systemOne('s', ['q1' => Question::noul('?')]);
 
         expect($result->requestId)->toBeNull()
             ->and(json_encode($result))->toBe(json_encode(SYSTEM_ONE_RESPONSE));
@@ -411,7 +412,7 @@ describe('response metadata', function () {
             jsonResponse(200, $wire, ['x-typesafe-request-id' => 'req_9', 'x-custom' => 'yes']),
         ]);
 
-        $response = makeClient($http)->systemOneWithResponse('s', ['q1' => noul('?')]);
+        $response = makeClient($http)->systemOneWithResponse('s', ['q1' => Question::noul('?')]);
 
         expect($response)->toBeInstanceOf(ApiResponse::class)
             ->and($response->status)->toBe(200)
@@ -432,7 +433,7 @@ describe('response metadata', function () {
     it('rejects a malformed response from systemOneWithResponse', function () {
         $http = new FakeHttpClient([jsonResponse(200, ['model' => 'm'])]);
 
-        expect(fn () => makeClient($http)->systemOneWithResponse('s', ['q1' => noul('?')]))
+        expect(fn () => makeClient($http)->systemOneWithResponse('s', ['q1' => Question::noul('?')]))
             ->toThrow(TypeSafeException::class, 'Unexpected response shape from POST /v1/systemone; expected { answers: {...} }.');
     });
 });

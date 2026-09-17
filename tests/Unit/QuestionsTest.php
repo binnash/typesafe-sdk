@@ -139,16 +139,18 @@ describe('rich criteria', function () {
     });
 });
 
-describe('global helpers', function () {
-    it('builds every primitive', function () {
-        expect(noul('q'))->toBeInstanceOf(NoulQuestion::class)
-            ->and(choice('q', ['a' => null]))->toBeInstanceOf(ChoiceQuestion::class)
-            ->and(score('q', ['low', 'high']))->toBeInstanceOf(ScoreQuestion::class);
+describe('builder api', function () {
+    it('builds every primitive through the Question factory', function () {
+        expect(Question::noul('q'))->toBeInstanceOf(NoulQuestion::class)
+            ->and(Question::choice('q', ['a' => null]))->toBeInstanceOf(ChoiceQuestion::class)
+            ->and(Question::score('q', ['low', 'high']))->toBeInstanceOf(ScoreQuestion::class);
     });
 
-    it('produces the same payload as the namespaced factories', function () {
-        expect(json_encode(choice('c', ['a' => 'A'])))->toBe(json_encode(Question::choice('c', ['a' => 'A'])))
-            ->and(json_encode(score('s', ['low', 'high'])))->toBe(json_encode(Question::score('s', ['low', 'high'])))
-            ->and(json_encode(noul('n')))->toBe(json_encode(Question::noul('n')));
+    it('exposes no global helper functions', function () {
+        // The builders are namespaced only: installing the SDK never reserves
+        // identifiers in the global scope of the host application.
+        expect(function_exists('noul'))->toBeFalse()
+            ->and(function_exists('choice'))->toBeFalse()
+            ->and(function_exists('score'))->toBeFalse();
     });
 });

@@ -11,6 +11,7 @@ use Binnash\Typesafe\Exceptions\TypeSafeException;
 use Binnash\Typesafe\Laravel\Facades\TypeSafe;
 use Binnash\Typesafe\Laravel\TypeSafeServiceProvider;
 use Binnash\Typesafe\Retry\RetryPolicy;
+use Binnash\Typesafe\Support\Question;
 use Binnash\Typesafe\Tests\Support\FakeHttpClient;
 use Binnash\Typesafe\TypeSafeClient;
 use Illuminate\Filesystem\Filesystem;
@@ -220,7 +221,7 @@ describe('facade usage', function () {
 
         $result = TypeSafe::systemOne(
             ['document' => 'I was charged twice.'],
-            ['is_billing' => noul('Is this about billing?')],
+            ['is_billing' => Question::noul('Is this about billing?')],
         );
 
         $body = json_decode((string) $http->lastRequest()->getBody(), true);
@@ -236,7 +237,7 @@ describe('facade usage', function () {
 
         TypeSafe::systemOne(
             'state',
-            ['is_billing' => noul('?')],
+            ['is_billing' => Question::noul('?')],
             model: 'jev-1.13.0',
             options: ['retry' => ['maxRetries' => 0]],
             extra: ['future_option' => true],
