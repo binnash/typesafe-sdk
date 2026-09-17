@@ -122,6 +122,14 @@ describe('configuration and headers', function () {
             ->toThrow(TypeSafeException::class, '`timeout` must be a positive number of seconds');
     });
 
+    it('exposes the models resource as a property and a method', function () {
+        $http = new FakeHttpClient([jsonResponse(200, ['models' => [MODEL_WIRE]])]);
+        $client = makeClient($http);
+
+        expect($client->models())->toBe($client->models)
+            ->and($client->models()->list())->toHaveCount(1);
+    });
+
     it('creates a client from an API key or explicit configuration', function () {
         $fromKey = TypeSafe::client('key', ['baseURL' => 'https://x.test', 'defaultModel' => 'm']);
         $fromConfig = TypeSafe::client(new ClientConfig('key', baseURL: 'https://y.test'));

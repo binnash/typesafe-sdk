@@ -48,6 +48,16 @@ final class TypeSafeClient implements JsonSerializable
     }
 
     /**
+     * The models available to the account.
+     *
+     * Mirrors the `$models` property so facades can reach it: `TypeSafe::models()->list()`.
+     */
+    public function models(): Models
+    {
+        return $this->models;
+    }
+
+    /**
      * Answer named questions about text or structured state.
      *
      * Ask independent questions over the same state together: they run in parallel and
