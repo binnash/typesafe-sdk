@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Binnash\Typesafe\Config\ClientConfig;
 use Binnash\Typesafe\Http\Transporter;
+use Binnash\Typesafe\Tests\Support\LaravelTestCase;
 use Binnash\Typesafe\Tests\TestCase;
 use Binnash\Typesafe\TypeSafeClient;
 use GuzzleHttp\Psr7\HttpFactory;
@@ -11,7 +12,8 @@ use GuzzleHttp\Psr7\Response;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseInterface;
 
-pest()->extend(TestCase::class)->in('Feature', 'Unit', 'Integration');
+pest()->extend(TestCase::class)->in('Unit', 'Integration', 'Feature/*.php');
+pest()->extend(LaravelTestCase::class)->in('Feature/Laravel');
 
 /**
  * Capture `var_dump()` output for an object, which honors `__debugInfo()`.

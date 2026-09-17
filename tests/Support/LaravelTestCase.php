@@ -4,11 +4,10 @@ declare(strict_types=1);
 
 namespace Binnash\Typesafe\Tests\Support;
 
-use Binnash\Typesafe\Config\ClientConfig;
 use Binnash\Typesafe\Laravel\TypeSafeServiceProvider;
-use Binnash\Typesafe\Tests\Support\FakeHttpClient;
 use GuzzleHttp\Psr7\HttpFactory;
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Foundation\Application;
 use Orchestra\Testbench\TestCase as TestbenchTestCase;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestFactoryInterface;
@@ -25,7 +24,7 @@ abstract class LaravelTestCase extends TestbenchTestCase
     protected ?FakeHttpClient $http = null;
 
     /**
-     * @param  \Illuminate\Foundation\Application  $app
+     * @param  Application  $app
      * @return list<class-string>
      */
     protected function getPackageProviders($app): array
@@ -41,7 +40,7 @@ abstract class LaravelTestCase extends TestbenchTestCase
     protected function fakeTransport(array $queue = []): FakeHttpClient
     {
         $this->http = new FakeHttpClient($queue);
-        $factory = new HttpFactory();
+        $factory = new HttpFactory;
 
         $this->app->instance(ClientInterface::class, $this->http);
         $this->app->instance(RequestFactoryInterface::class, $factory);
