@@ -20,6 +20,7 @@ your code owns the workflow: routing, thresholds, ranking, and side effects.
 - [Errors](#errors)
 - [Logging](#logging)
 - [Models](#models)
+- [Laravel](#laravel)
 - [Testing](#testing)
 
 ## Requirements
@@ -385,6 +386,108 @@ $response->data;                       // the raw { "models": [...] } payload
 ships, so answers can change without a change on your side. The response's
 `model` field reports the versioned ID that answered — log it, and pin a version
 in `defaultModel` when you have tuned thresholds against it.
+
+## Laravel
+
+Laravel 11 and 12 are supported through package auto-discovery: install the
+package, set your key, and start calling it.
+
+```sh
+composer require binnash/typesafe-sdk
+```
+
+```dotenv
+# .env
+TYPESAFE_API_KEY=your-api-key
+```
+
+That is the whole setup. The bridge reads these variables for you:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `TYPESAFE_API_KEY` | *required* | API key used as a bearer token |
+| `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` | API root |
+| `TYPESAFE_DEFAULT_MODEL` | `jev-latest` | Model used when a call omits one |
+| `TYPESAFE_TIMEOUT` | `10.0` | Timeout per attempt, in seconds |
+| `TYPESAFE_LOG_LEVEL` | `warn` | `debug`, `info`, `warn`, `error`, or `off` |
+| `TYPESAFE_MAX_RETRIES` | `2` | Retries after the initial attempt |
+| `TYPESAFE_BACKOFF_INITIAL_MS` | `500` | First backoff delay in milliseconds |
+| `TYPESAFE_BACKOFF_MAX_MS` | `5000` | Maximum backoff delay in milliseconds |
+| `TYPESAFE_BACKOFF_JITTER` | `0.25` | Fraction of each delay randomly subtracted |
+| `TYPESAFE_RESPECT_RETRY_AFTER` | `true` | Honor server retry delay headers |
+
+Only the bridge reads the environment — the core SDK always receives explicit
+values, so its behavior is identical outside Laravel.
+
+### The facade
+
+```php
+use Binnash\Typesafe\Laravel\Facades\TypeSafe;
+
+$result = TypeSafe::systemOne(
+    state: $ticket,
+    questions: [
+        'is_billing' => noul('Is this ticket about billing?'),
+        'urgency' => score('How urgent is this?', ['can wait', 'this week', 'today']),
+    ],
+);
+
+$result->answers->is_billing->noul;
+
+$models = TypeSafe::models()->list();
+```
+
+### Dependency injection
+
+The client and its configuration are shared singletons, so type-hinting either
+one resolves the same instance the facade uses — in controllers, jobs, commands,
+and listeners:
+
+```php
+use Binnash\Typesafe\TypeSafeClient;
+
+final class TriageTicket
+{
+    public function __construct(private readonly TypeSafeClient $typeSafe) {}
+
+    public function handle(Ticket $ticket): void
+    {
+        $result = $this->typeSafe->systemOne(
+            state: ['subject' => $ticket->subject, 'body' => $ticket->body],
+            questions: ['urgency' => score('How urgent?', ['can wait', 'this week', 'today'])],
+            options: ['retry' => ['maxRetries' => 0]], // per call, for queue jobs with their own retries
+        );
+
+        $ticket->update(['urgency' => $result->answers->urgency->score]);
+    }
+}
+```
+
+### Publishing the config
+
+```sh
+php artisan vendor:publish --tag=typesafe-config
+```
+
+This copies `config/typesafe.php` into your application, where the defaults above
+can be changed and a custom PSR-18 client, PSR-17 factories, or logger can be
+configured (`http_client`, `request_factory`, `stream_factory`, `logger`). Values
+left as `null` fall back to whatever your container binds.
+
+Logs go to Laravel's logger by default, filtered by `TYPESAFE_LOG_LEVEL`.
+
+### Testing your application
+
+Bind your own PSR-18 client in a test to keep the network out of it:
+
+```php
+use Psr\Http\Client\ClientInterface;
+
+$this->app->instance(ClientInterface::class, $fakeClient);
+```
+
+The package's own bridge tests do exactly this; see
+`tests/Feature/Laravel/LaravelBridgeTest.php`.
 
 ## Testing
 
