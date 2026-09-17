@@ -6,6 +6,7 @@ namespace Binnash\Typesafe\Retry;
 
 use Binnash\Typesafe\Exceptions\TypeSafeException;
 use Binnash\Typesafe\Support\Headers;
+use Throwable;
 
 /**
  * Retry settings for failed attempts, with capped exponential backoff.
@@ -116,6 +117,81 @@ final class RetryPolicy
         sort($statuses);
 
         return $statuses;
+    }
+
+    /**
+     * A copy of this policy with the given settings replaced.
+     *
+     * Only arguments that are not `null` are applied, so callers can overlay a
+     * partial policy without restating the base. To clear the status list, pass
+     * an empty array, which retries no status codes.
+     *
+     * @param  int|null  $maxRetries  Maximum retries after the initial attempt.
+     * @param  int|null  $backoffInitialMs  First backoff delay in milliseconds.
+     * @param  int|null  $backoffMaxMs  Maximum backoff delay in milliseconds.
+     * @param  float|null  $backoffJitter  Fraction of each delay randomly subtracted.
+     * @param  list<int>|null  $httpStatuses  Status codes to retry.
+     * @param  bool|null  $respectRetryAfter  Honor server retry delay headers.
+     * @param  int|null  $maxRetryAfterMs  Longest server retry delay to honor.
+     * @param  bool|null  $retryConnectionErrors  Retry connection failures.
+     * @param  bool|null  $retryTimeoutErrors  Retry attempts that exceeded the timeout.
+     *
+     * @throws TypeSafeException When a replacement setting is invalid.
+     */
+    public function with(
+        ?int $maxRetries = null,
+        ?int $backoffInitialMs = null,
+        ?int $backoffMaxMs = null,
+        ?float $backoffJitter = null,
+        ?array $httpStatuses = null,
+        ?bool $respectRetryAfter = null,
+        ?int $maxRetryAfterMs = null,
+        ?bool $retryConnectionErrors = null,
+        ?bool $retryTimeoutErrors = null,
+    ): self {
+        return new self(
+            maxRetries: $maxRetries ?? $this->maxRetries,
+            backoffInitialMs: $backoffInitialMs ?? $this->backoffInitialMs,
+            backoffMaxMs: $backoffMaxMs ?? $this->backoffMaxMs,
+            backoffJitter: $backoffJitter ?? $this->backoffJitter,
+            httpStatuses: $httpStatuses ?? $this->statuses(),
+            respectRetryAfter: $respectRetryAfter ?? $this->respectRetryAfter,
+            maxRetryAfterMs: $maxRetryAfterMs ?? $this->maxRetryAfterMs,
+            retryConnectionErrors: $retryConnectionErrors ?? $this->retryConnectionErrors,
+            retryTimeoutErrors: $retryTimeoutErrors ?? $this->retryTimeoutErrors,
+        );
+    }
+
+    /**
+     * Resolve a policy from per-call overrides applied to a base policy.
+     *
+     * Overrides are either a complete policy, a partial map of constructor
+     * arguments, or `null` to reuse the base unchanged.
+     *
+     * @param  RetryPolicy|array<string, mixed>|null  $overrides  Per-call overrides.
+     * @param  RetryPolicy|null  $base  Policy the overrides apply to; defaults to the SDK policy.
+     *
+     * @throws TypeSafeException When an override is malformed or invalid.
+     */
+    public static function from(RetryPolicy|array|null $overrides, ?RetryPolicy $base = null): self
+    {
+        $base ??= self::default();
+
+        if ($overrides === null) {
+            return $base;
+        }
+
+        if ($overrides instanceof self) {
+            return $overrides;
+        }
+
+        try {
+            return $base->with(...$overrides);
+        } catch (TypeSafeException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            throw new TypeSafeException('Invalid retry options: '.$e->getMessage(), 0, $e);
+        }
     }
 
     /**

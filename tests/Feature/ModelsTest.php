@@ -310,6 +310,50 @@ describe('retries', function () {
             ->and($http->requests)->toHaveCount(3)
             ->and($delays)->toBe([500, 1000]);
     });
+
+    it('honors per-call retry overrides as a map', function () {
+        $http = new FakeHttpClient([jsonResponse(429, ['error' => 'slow down'])]);
+        $delays = [];
+        $client = makeClient($http, sleeper: recordSleeps($delays));
+
+        expect(fn () => $client->models->list(['retry' => ['maxRetries' => 0]]))
+            ->toThrow(ApiException::class, '429 slow down')
+            ->and($http->requests)->toHaveCount(1)
+            ->and($delays)->toBe([]);
+    });
+
+    it('honors per-call retry overrides as a policy', function () {
+        $http = new FakeHttpClient([jsonResponse(503, ['error' => 'overloaded'])]);
+        $client = makeClient($http);
+
+        expect(fn () => $client->models->list(['retry' => new RetryPolicy(maxRetries: 0)]))
+            ->toThrow(ApiException::class, '503 overloaded')
+            ->and($http->requests)->toHaveCount(1);
+    });
+
+    it('inherits unset settings from the client policy for per-call overrides', function () {
+        $http = new FakeHttpClient([
+            jsonResponse(503, ['error' => 'overloaded']),
+            jsonResponse(200, ['models' => []]),
+        ]);
+        $delays = [];
+        $client = makeClient(
+            $http,
+            ['retryPolicy' => new RetryPolicy(backoffInitialMs: 250, backoffJitter: 0.0)],
+            recordSleeps($delays),
+        );
+
+        expect($client->models->list(['retry' => ['maxRetries' => 1]]))->toBe([])
+            ->and($delays)->toBe([250]);
+    });
+
+    it('rejects malformed per-call retry overrides without sending', function () {
+        $http = new FakeHttpClient([jsonResponse(200, ['models' => []])]);
+
+        expect(fn () => makeClient($http)->models->list(['retry' => ['nope' => 1]]))
+            ->toThrow(TypeSafeException::class, 'Invalid retry options: Unknown named parameter $nope')
+            ->and($http->requests)->toBe([]);
+    });
 });
 
 describe('transport construction', function () {

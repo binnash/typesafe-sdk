@@ -95,15 +95,15 @@ final class Transporter
      * @param  string  $method  HTTP method.
      * @param  string  $path  Path appended to the configured base URL.
      * @param  array<string, mixed>|null  $body  Request body, encoded as JSON when present.
-     * @param  array{headers?: array<string, string>, timeout?: float}  $options  Per-call overrides.
+     * @param  array{headers?: array<string, string>, timeout?: float, retry?: RetryPolicy|array<string, mixed>}  $options  Per-call overrides.
      *
      * @throws ApiException The server returned a non-2xx response after retries.
      * @throws ApiConnectionException The request could not connect or timed out after retries.
-     * @throws TypeSafeException The request could not be encoded.
+     * @throws TypeSafeException The request could not be encoded, or an option is invalid.
      */
     public function request(string $method, string $path, ?array $body = null, array $options = []): ApiResponse
     {
-        $retryPolicy = $this->config->retryPolicy;
+        $retryPolicy = RetryPolicy::from($options['retry'] ?? null, $this->config->retryPolicy);
         $timeoutMs = $this->resolveTimeoutMs($options);
         $headers = Headers::merge($this->config->defaultHeaders, $options['headers'] ?? []);
         $url = $this->config->baseURL.$path;
