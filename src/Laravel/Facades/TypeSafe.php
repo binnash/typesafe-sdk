@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Facade;
  * Static access to the shared TypeSafe client.
  *
  * ```php
- * use Binnash\Typesafe\Question;
+ * use Binnash\Typesafe\Support\Question;
  *
  * $result = TypeSafe::systemOne($state, ['tone' => Question::choice('Tone?', ['calm' => null])]);
  * $models = TypeSafe::models()->list();

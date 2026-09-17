@@ -52,7 +52,7 @@ $client = TypeSafe::client('your-api-key');
 ## Quickstart
 
 ```php
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 use Binnash\Typesafe\TypeSafe;
 
 $client = TypeSafe::client('your-api-key');
@@ -105,7 +105,7 @@ own global helpers, other packages, or your own code. One import covers all thre
 builders:
 
 ```php
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 ```
 
 ## Questions
@@ -113,7 +113,7 @@ use Binnash\Typesafe\Question;
 ### Noul — yes or no
 
 ```php
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 
 Question::noul('Does this convey urgency?');
 
@@ -136,7 +136,7 @@ $answer->isYes(0.9);      // true, using your own threshold
 ### Choice — one of a set
 
 ```php
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 
 Question::choice('Which team should handle this?', [
     'billing' => 'Payments, invoicing, refunds',
@@ -160,7 +160,7 @@ own data and consequences.
 ### Score — degree along a rubric
 
 ```php
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 
 Question::score('How frustrated is the customer?', ['Calm', 'Frustrated', 'Very angry']);
 ```
@@ -184,7 +184,7 @@ structure. Descriptions may also be objects, which helps define contrasts,
 exclusions, and examples:
 
 ```php
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 
 Question::noul('Is the customer reporting a duplicate charge?', [
     'true' => [
@@ -270,7 +270,7 @@ Every call accepts an options array and, for `systemOne`, extra top-level payloa
 fields:
 
 ```php
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 
 $result = $client->systemOne(
     state: $ticket,
@@ -444,7 +444,7 @@ values, so its behavior is identical outside Laravel.
 
 ```php
 use Binnash\Typesafe\Laravel\Facades\TypeSafe;
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 
 $result = TypeSafe::systemOne(
     state: $ticket,
@@ -466,7 +466,7 @@ one resolves the same instance the facade uses — in controllers, jobs, command
 and listeners:
 
 ```php
-use Binnash\Typesafe\Question;
+use Binnash\Typesafe\Support\Question;
 use Binnash\Typesafe\TypeSafeClient;
 
 final class TriageTicket
