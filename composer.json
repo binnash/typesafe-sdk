@@ -1,11 +1,11 @@
 {
-    "name": "binnash/typesafe-ai-sdk",
+    "name": "binnash/typesafe-sdk",
     "description": "PHP & Laravel SDK for TypeSafe AI's JEV Model series",
     "type": "library",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Binnash\\TypesafeAiSdk\\": "src/"
+            "Binnash\\Typesafe\\": "src/"
         }
     },
     "authors": [
