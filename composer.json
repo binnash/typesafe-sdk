@@ -1,0 +1,19 @@
+{
+    "name": "binnash/typesafe-ai-sdk",
+    "description": "PHP & Laravel SDK for TypeSafe AI's JEV Model series",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Binnash\\TypesafeAiSdk\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Nazmul Alam",
+            "email": "n@zmul.dev"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {}
+}
