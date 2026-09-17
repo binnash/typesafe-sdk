@@ -10,6 +10,20 @@ use Binnash\Typesafe\Questions\ScoreQuestion;
 
 /**
  * Factories for the three question primitives.
+ *
+ * This is the only supported way to build questions. The SDK deliberately ships
+ * no global helper functions: reserving identifiers such as `choice()` in the
+ * host application's global scope can collide with Laravel's own helpers, other
+ * packages, or application code, and namespaced functions cannot be autoloaded
+ * lazily. One import covers all three builders:
+ *
+ * ```php
+ * use Binnash\Typesafe\Support\Question;
+ *
+ * Question::noul('Is this about billing?');
+ * Question::choice('Which team?', ['billing' => null]);
+ * Question::score('How urgent?', ['can wait', 'today']);
+ * ```
  */
 final class Question
 {
