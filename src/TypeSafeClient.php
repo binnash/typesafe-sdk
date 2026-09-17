@@ -7,9 +7,11 @@ namespace Binnash\Typesafe;
 use Binnash\Typesafe\Config\ClientConfig;
 use Binnash\Typesafe\DTO\SystemOneResult;
 use Binnash\Typesafe\Exceptions\TypeSafeException;
+use Binnash\Typesafe\Http\ApiResponse;
 use Binnash\Typesafe\Http\Transporter;
 use Binnash\Typesafe\Questions\QuestionInterface;
 use Binnash\Typesafe\Resources\Models;
+use Binnash\Typesafe\Retry\RetryPolicy;
 use JsonSerializable;
 
 /**
@@ -55,7 +57,7 @@ final class TypeSafeClient implements JsonSerializable
      * @param  mixed  $state  Text, a JSON object or array, or `null` to evaluate.
      * @param  array<string, QuestionInterface>  $questions  Non-empty questions keyed by the answer names.
      * @param  string|null  $model  Model override; omitted values use the configured default.
-     * @param  array{headers?: array<string, string>, timeout?: float}  $options  Per-call overrides.
+     * @param  array{headers?: array<string, string>, timeout?: float, retry?: RetryPolicy|array<string, mixed>}  $options  Per-call overrides.
      *
      * @throws TypeSafeException When no questions are given or a value is not a question.
      */
@@ -65,11 +67,36 @@ final class TypeSafeClient implements JsonSerializable
         ?string $model = null,
         array $options = [],
     ): SystemOneResult {
-        $response = $this->transporter->request('POST', '/v1/systemone', [
-            'state' => $state,
-            'model' => $model ?? $this->config->defaultModel,
-            'questions' => $this->wireQuestions($questions),
-        ], $options);
+        $response = $this->systemOneWithResponse($state, $questions, $model, $options);
+
+        return SystemOneResult::fromArray($response->data, $response->requestId);
+    }
+
+    /**
+     * Answer named questions and keep the raw response.
+     *
+     * Use this when you need the HTTP status, response headers, or the request ID
+     * alongside the answers. It mirrors the JavaScript SDK's `withResponse()`.
+     *
+     * @param  mixed  $state  Text, a JSON object or array, or `null` to evaluate.
+     * @param  array<string, QuestionInterface>  $questions  Non-empty questions keyed by the answer names.
+     * @param  string|null  $model  Model override; omitted values use the configured default.
+     * @param  array{headers?: array<string, string>, timeout?: float, retry?: RetryPolicy|array<string, mixed>}  $options  Per-call overrides.
+     *
+     * @throws TypeSafeException When no questions are given, a value is not a question, or the response is malformed.
+     */
+    public function systemOneWithResponse(
+        mixed $state,
+        array $questions,
+        ?string $model = null,
+        array $options = [],
+    ): ApiResponse {
+        $response = $this->transporter->request(
+            'POST',
+            '/v1/systemone',
+            $this->systemOnePayload($state, $questions, $model),
+            $options,
+        );
 
         $data = $response->data;
 
@@ -79,7 +106,24 @@ final class TypeSafeClient implements JsonSerializable
             );
         }
 
-        return SystemOneResult::fromArray($data);
+        return $response;
+    }
+
+    /**
+     * Build the request body, validating the questions before anything is sent.
+     *
+     * @param  array<string, QuestionInterface>  $questions
+     * @return array<string, mixed>
+     *
+     * @throws TypeSafeException When no questions are given or a value is not a question.
+     */
+    private function systemOnePayload(mixed $state, array $questions, ?string $model): array
+    {
+        return [
+            'state' => $state,
+            'model' => $model ?? $this->config->defaultModel,
+            'questions' => $this->wireQuestions($questions),
+        ];
     }
 
     /**

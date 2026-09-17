@@ -7,6 +7,7 @@ use Binnash\Typesafe\DTO\NoulResponse;
 use Binnash\Typesafe\DTO\ScoreResponse;
 use Binnash\Typesafe\DTO\Usage;
 use Binnash\Typesafe\Exceptions\TypeSafeException;
+use Binnash\Typesafe\Http\ApiResponse;
 use Binnash\Typesafe\Tests\Support\FakeHttpClient;
 use Binnash\Typesafe\TypeSafeClient;
 
@@ -326,4 +327,63 @@ it('reports the model that answered', function () {
 
     expect(makeClient($http)->systemOne('s', ['q1' => noul('?')])->model)->toBe('jev-1.13.0')
         ->and(TypeSafeClient::VERSION)->toBe('0.1.0');
+});
+
+describe('response metadata', function () {
+    it('exposes the request id on the result', function () {
+        $http = new FakeHttpClient([
+            jsonResponse(200, SYSTEM_ONE_RESPONSE, ['x-typesafe-request-id' => 'req_123']),
+        ]);
+
+        $result = makeClient($http)->systemOne('s', ['q1' => noul('?')]);
+
+        expect($result->requestId)->toBe('req_123')
+            ->and($result->toArray())->toBe(SYSTEM_ONE_RESPONSE)
+            ->and(json_decode(json_encode($result), true))->toBe([
+                'request_id' => 'req_123',
+                'model' => 'jev-1.13.0',
+                'answers' => ['q1' => ['type' => 'noul', 'noul' => 0.5]],
+                'usage' => ['input_tokens' => 312, 'output_tokens' => 48],
+            ]);
+    });
+
+    it('leaves the request id null when the header is absent', function () {
+        $http = new FakeHttpClient([jsonResponse(200, SYSTEM_ONE_RESPONSE)]);
+
+        $result = makeClient($http)->systemOne('s', ['q1' => noul('?')]);
+
+        expect($result->requestId)->toBeNull()
+            ->and(json_encode($result))->toBe(json_encode(SYSTEM_ONE_RESPONSE));
+    });
+
+    it('returns the raw response from systemOneWithResponse', function () {
+        $wire = ['model' => 'jev-1.13.0', 'answers' => ['q1' => ['type' => 'noul', 'noul' => 0.25]], 'usage' => ['input_tokens' => 5, 'output_tokens' => 2]];
+        $http = new FakeHttpClient([
+            jsonResponse(200, $wire, ['x-typesafe-request-id' => 'req_9', 'x-custom' => 'yes']),
+        ]);
+
+        $response = makeClient($http)->systemOneWithResponse('s', ['q1' => noul('?')]);
+
+        expect($response)->toBeInstanceOf(ApiResponse::class)
+            ->and($response->status)->toBe(200)
+            ->and($response->requestId)->toBe('req_9')
+            ->and($response->data)->toBe($wire)
+            ->and($response->header('x-custom'))->toBe('yes')
+            ->and($http->lastRequest()->getMethod())->toBe('POST');
+    });
+
+    it('validates before sending from systemOneWithResponse too', function () {
+        $http = new FakeHttpClient([]);
+
+        expect(fn () => makeClient($http)->systemOneWithResponse('s', []))
+            ->toThrow(TypeSafeException::class, 'At least one question is required.')
+            ->and($http->requests)->toBe([]);
+    });
+
+    it('rejects a malformed response from systemOneWithResponse', function () {
+        $http = new FakeHttpClient([jsonResponse(200, ['model' => 'm'])]);
+
+        expect(fn () => makeClient($http)->systemOneWithResponse('s', ['q1' => noul('?')]))
+            ->toThrow(TypeSafeException::class, 'Unexpected response shape from POST /v1/systemone; expected { answers: {...} }.');
+    });
 });
