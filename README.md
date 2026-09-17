@@ -52,6 +52,7 @@ $client = TypeSafe::client('your-api-key');
 ## Quickstart
 
 ```php
+use Binnash\Typesafe\Question;
 use Binnash\Typesafe\TypeSafe;
 
 $client = TypeSafe::client('your-api-key');
@@ -62,13 +63,13 @@ $result = $client->systemOne(
         'body' => 'I see two charges of $49 on my card. Please fix this ASAP.',
     ],
     questions: [
-        'is_billing' => noul('Is this ticket about billing?'),
-        'tone' => choice("What is the customer's tone?", [
+        'is_billing' => Question::noul('Is this ticket about billing?'),
+        'tone' => Question::choice("What is the customer's tone?", [
             'calm' => null,
             'frustrated' => null,
             'angry' => null,
         ]),
-        'urgency' => score('How urgent is this ticket?', ['can wait', 'this week', 'today']),
+        'urgency' => Question::score('How urgent is this ticket?', ['can wait', 'this week', 'today']),
     ],
 );
 
@@ -90,21 +91,33 @@ Choose by what the answer means.
 
 | Question | Use when | Answer |
 | --- | --- | --- |
-| `noul()` | A condition holds or not | Probability of yes, `0.0`–`1.0` |
-| `choice()` | One of a defined set | Winning label, distribution, confidence |
-| `score()` | Degree along an ordered rubric | Probability-weighted score, legend, confidence |
+| `Question::noul()` | A condition holds or not | Probability of yes, `0.0`–`1.0` |
+| `Question::choice()` | One of a defined set | Winning label, distribution, confidence |
+| `Question::score()` | Degree along an ordered rubric | Probability-weighted score, legend, confidence |
 
-Use one `noul()` per label when several labels may apply independently. Use
-comparable `score()` questions for graded ranking across items.
+Use one `Question::noul()` per label when several labels may apply independently.
+Use comparable `Question::score()` questions for graded ranking across items.
+
+The SDK ships **no global functions**. Everything lives in the
+`Binnash\Typesafe` namespace, so installing it never reserves identifiers such as
+`Question::choice()` in your application's global scope — a collision risk with Laravel's
+own global helpers, other packages, or your own code. One import covers all three
+builders:
+
+```php
+use Binnash\Typesafe\Question;
+```
 
 ## Questions
 
 ### Noul — yes or no
 
 ```php
-noul('Does this convey urgency?');
+use Binnash\Typesafe\Question;
 
-noul('Does this convey urgency?', [
+Question::noul('Does this convey urgency?');
+
+Question::noul('Does this convey urgency?', [
     'true' => 'Explicitly time-sensitive',
     'false' => 'No urgency expressed',
 ]);
@@ -123,7 +136,9 @@ $answer->isYes(0.9);      // true, using your own threshold
 ### Choice — one of a set
 
 ```php
-choice('Which team should handle this?', [
+use Binnash\Typesafe\Question;
+
+Question::choice('Which team should handle this?', [
     'billing' => 'Payments, invoicing, refunds',
     'technical' => 'Bugs, outages, integrations',
     'sales' => null, // null when the label needs no extra detail
@@ -145,7 +160,9 @@ own data and consequences.
 ### Score — degree along a rubric
 
 ```php
-score('How frustrated is the customer?', ['Calm', 'Frustrated', 'Very angry']);
+use Binnash\Typesafe\Question;
+
+Question::score('How frustrated is the customer?', ['Calm', 'Frustrated', 'Very angry']);
 ```
 
 At least two levels are required, ordered from zero. Levels should describe
@@ -167,14 +184,16 @@ structure. Descriptions may also be objects, which helps define contrasts,
 exclusions, and examples:
 
 ```php
-noul('Is the customer reporting a duplicate charge?', [
+use Binnash\Typesafe\Question;
+
+Question::noul('Is the customer reporting a duplicate charge?', [
     'true' => [
         'meaning' => 'the same amount charged more than once',
         'examples' => ['billed twice'],
     ],
 ]);
 
-choice('Are these the same incident?', [
+Question::choice('Are these the same incident?', [
     'same' => ['match_on' => 'actors, action, location, occurrence time'],
     'different' => ['distinguish_by' => 'occurrence time or distinguishing numbers'],
 ]);
@@ -251,9 +270,11 @@ Every call accepts an options array and, for `systemOne`, extra top-level payloa
 fields:
 
 ```php
+use Binnash\Typesafe\Question;
+
 $result = $client->systemOne(
     state: $ticket,
-    questions: ['tone' => choice('Tone?', ['calm' => null, 'upset' => null])],
+    questions: ['tone' => Question::choice('Tone?', ['calm' => null, 'upset' => null])],
     model: 'jev-1.13.0',                                  // pin a version
     options: [
         'headers' => ['X-Trace' => $request->id()],
@@ -344,9 +365,9 @@ try {
 ```
 
 Shapes the API would reject are caught before sending, so failures surface
-locally: an empty `questions` map, `score()` criteria that are not a list of at
-least two levels, `choice()` criteria that are a list or empty, and unknown
-`noul()` criteria keys.
+locally: an empty `questions` map, `Question::score()` criteria that are not a list of
+at least two levels, `Question::choice()` criteria that are a list or empty, and
+unknown `Question::noul()` criteria keys.
 
 ## Logging
 
@@ -423,12 +444,13 @@ values, so its behavior is identical outside Laravel.
 
 ```php
 use Binnash\Typesafe\Laravel\Facades\TypeSafe;
+use Binnash\Typesafe\Question;
 
 $result = TypeSafe::systemOne(
     state: $ticket,
     questions: [
-        'is_billing' => noul('Is this ticket about billing?'),
-        'urgency' => score('How urgent is this?', ['can wait', 'this week', 'today']),
+        'is_billing' => Question::noul('Is this ticket about billing?'),
+        'urgency' => Question::score('How urgent is this?', ['can wait', 'this week', 'today']),
     ],
 );
 
@@ -444,6 +466,7 @@ one resolves the same instance the facade uses — in controllers, jobs, command
 and listeners:
 
 ```php
+use Binnash\Typesafe\Question;
 use Binnash\Typesafe\TypeSafeClient;
 
 final class TriageTicket
@@ -454,7 +477,7 @@ final class TriageTicket
     {
         $result = $this->typeSafe->systemOne(
             state: ['subject' => $ticket->subject, 'body' => $ticket->body],
-            questions: ['urgency' => score('How urgent?', ['can wait', 'this week', 'today'])],
+            questions: ['urgency' => Question::score('How urgent?', ['can wait', 'this week', 'today'])],
             options: ['retry' => ['maxRetries' => 0]], // per call, for queue jobs with their own retries
         );
 
