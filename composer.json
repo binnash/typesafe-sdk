@@ -3,17 +3,52 @@
     "description": "PHP & Laravel SDK for TypeSafe AI's JEV Model series",
     "type": "library",
     "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Binnash\\Typesafe\\": "src/"
-        }
-    },
     "authors": [
         {
             "name": "Nazmul Alam",
             "email": "n@zmul.dev"
         }
     ],
+    "require": {
+        "php": "^8.2 || ^8.3 || ^8.4 || ^8.5",
+        "ext-json": "*",
+        "php-http/discovery": "^1.18",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.0",
+        "psr/http-message": "^1.1 || ^2.0",
+        "psr/log": "^1.0 || ^2.0 || ^3.0"
+    },
+    "require-dev": {
+        "guzzlehttp/guzzle": "^7.8",
+        "guzzlehttp/psr7": "^2.6",
+        "laravel/pint": "^1.24",
+        "mockery/mockery": "^1.6",
+        "pestphp/pest": "^3.0 || ^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Binnash\\Typesafe\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Binnash\\Typesafe\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true,
+            "php-http/discovery": true
+        },
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "pint": "vendor/bin/pint"
+    },
     "minimum-stability": "stable",
-    "require": {}
+    "prefer-stable": true
 }
