@@ -19,9 +19,6 @@ enum LogLevel: string
     case Error = 'error';
     case Off = 'off';
 
-    /** The default log level used when none is configured. */
-    public const DEFAULT = self::Warn;
-
     /**
      * Resolve a log level from its string value.
      *
